@@ -29,10 +29,10 @@ func newClient(conn net.Conn) *Client {
 }
 
 type Client struct {
-	conn      net.Conn
-	OnCommand func(CMD string, data []byte) ([]byte, error)
-	logger    Logger
-	state     int32
+	conn   net.Conn
+	OnData func(data []byte) ([]byte, error)
+	logger Logger
+	state  int32
 }
 
 func (c *Client) Serve() error {
@@ -58,8 +58,8 @@ func (c *Client) Serve() error {
 				return err
 			}
 		case CMDData:
-			if c.OnCommand != nil {
-				b, err := c.OnCommand(header.CMDStr(), data)
+			if c.OnData != nil {
+				b, err := c.OnData(data)
 				if err != nil {
 					return err
 				}

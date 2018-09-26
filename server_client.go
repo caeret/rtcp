@@ -30,7 +30,7 @@ func (c *ServerClient) keepalive() {
 	for {
 		<-time.After(time.Second * 10)
 		c.logger.Printf("try send ping for client with ip %s.", c.IP())
-		_, _, err := c.Send(CMDPing, nil)
+		_, _, err := c.send(CMDPing, nil)
 		if err != nil {
 			if err == ErrClientBusy {
 				c.logger.Printf("client is busy.")
@@ -46,7 +46,11 @@ func (c *ServerClient) keepalive() {
 	}
 }
 
-func (c *ServerClient) Send(CMD string, d []byte) (header Header, data []byte, err error) {
+func (c *ServerClient) Send(d []byte) (header Header, data []byte, err error) {
+	return c.send(CMDData, d)
+}
+
+func (c *ServerClient) send(CMD string, d []byte) (header Header, data []byte, err error) {
 	c.logger.Printf("send command %s %s.", CMD, d)
 	if !atomic.CompareAndSwapInt32(&c.state, 0, 1) {
 		err = ErrClientBusy
