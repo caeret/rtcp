@@ -19,6 +19,7 @@ type Server struct {
 	addr    string
 	clients map[string]*ServerClient
 	logger  Logger
+	OnConnect  func(*ServerClient) error
 	OnPong  func(*ServerClient)
 	sync.RWMutex
 }
@@ -42,6 +43,15 @@ func (s *Server) ListenAndServe() error {
 		}
 
 		client := newServerClient(s, conn)
+
+		if s.OnConnect != nil {
+			err = s.OnConnect(client)
+			if err != nil {
+				s.logger.Printf("skip client: %s.", err)
+				continue
+			}
+		}
+
 		err = s.addClient(client)
 		if err != nil {
 			s.logger.Printf("fail to add client: %s", err.Error())
