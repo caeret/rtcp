@@ -2,7 +2,6 @@ package rtcp
 
 import (
 	"net"
-	"strings"
 	"time"
 )
 
@@ -17,22 +16,20 @@ func Dial(addr string, logger Logger) (client *Client, err error) {
 	if err != nil {
 		return
 	}
-	client = newClient(conn)
+	client = newClient(conn, logger)
 	client.logger = logger
 	return
 }
 
-func newClient(conn net.Conn) *Client {
+func newClient(conn net.Conn, logger Logger) *Client {
 	client := new(Client)
-	client.conn = conn
+	client.internalClient = newInternalClient(conn, logger)
 	return client
 }
 
 type Client struct {
-	conn   net.Conn
 	OnData func(data []byte) ([]byte, error)
-	logger Logger
-	state  int32
+	*internalClient
 }
 
 func (c *Client) Serve() error {
@@ -72,14 +69,3 @@ func (c *Client) Serve() error {
 	}
 }
 
-func (c *Client) IP() string {
-	strs := strings.Split(c.conn.RemoteAddr().String(), ":")
-	if len(strs) > 0 {
-		return strs[0]
-	}
-	return ""
-}
-
-func (c *Client) Close() error {
-	return c.conn.Close()
-}

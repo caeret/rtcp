@@ -2,23 +2,23 @@ package rtcp
 
 import (
 	"net"
-	"sync/atomic"
 	"time"
 )
 
 func newServerClient(server *Server, conn net.Conn) *ServerClient {
 	client := new(ServerClient)
-	client.Client = newClient(conn)
+	client.internalClient = newInternalClient(conn, server.logger)
 	client.s = server
-	client.logger = server.logger
+	client.timeout = server.timeout
 	client.lastHB = time.Now()
 	return client
 }
 
 type ServerClient struct {
-	*Client
-	s      *Server
-	lastHB time.Time
+	*internalClient
+	s       *Server
+	timeout time.Duration
+	lastHB  time.Time
 }
 
 func (c *ServerClient) LastHB() time.Time {
@@ -55,19 +55,24 @@ func (c *ServerClient) keepalive() {
 
 func (c *ServerClient) Send(d []byte) (data []byte, err error) {
 	_, data, err = c.send(CMDData, d)
+	if err != nil {
+		c.s.removeClient(c.IP())
+	}
 	return
 }
 
 func (c *ServerClient) send(CMD string, d []byte) (header Header, data []byte, err error) {
 	c.logger.Printf("send command %s %s.", CMD, d)
-	if !atomic.CompareAndSwapInt32(&c.state, 0, 1) {
+	if !c.acquire() {
 		err = ErrClientBusy
 		return
 	}
-	defer atomic.CompareAndSwapInt32(&c.state, 1, 0)
-	err = c.conn.SetDeadline(time.Now().Add(time.Second * 5))
-	if err != nil {
-		return
+	defer c.release()
+	if c.timeout > 0 {
+		err = c.conn.SetDeadline(time.Now().Add(c.timeout))
+		if err != nil {
+			return
+		}
 	}
 	err = Write(c.conn, []byte(CMD), d)
 	if err != nil {

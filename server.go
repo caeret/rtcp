@@ -7,11 +7,12 @@ import (
 	"time"
 )
 
-func NewServer(addr string, logger Logger) *Server {
+func NewServer(addr string, timeout time.Duration, logger Logger) *Server {
 	s := new(Server)
 	s.addr = addr
 	s.logger = logger
 	s.clients = make(map[string]*ServerClient)
+	s.timeout = timeout
 	return s
 }
 
@@ -22,6 +23,7 @@ type Server struct {
 	logger    Logger
 	OnConnect func(*ServerClient) error
 	OnPong    func(*ServerClient)
+	timeout   time.Duration
 	sync.RWMutex
 }
 
