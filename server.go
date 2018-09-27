@@ -16,11 +16,12 @@ func NewServer(addr string, logger Logger) *Server {
 }
 
 type Server struct {
-	addr    string
-	clients map[string]*ServerClient
-	logger  Logger
-	OnConnect  func(*ServerClient) error
-	OnPong  func(*ServerClient)
+	addr      string
+	listener  net.Listener
+	clients   map[string]*ServerClient
+	logger    Logger
+	OnConnect func(*ServerClient) error
+	OnPong    func(*ServerClient)
 	sync.RWMutex
 }
 
@@ -29,6 +30,8 @@ func (s *Server) ListenAndServe() error {
 	if err != nil {
 		return err
 	}
+
+	s.listener = l
 
 	s.logger.Printf("listen on addr %s", s.addr)
 
@@ -100,4 +103,11 @@ func (s *Server) removeClient(ip string) {
 		}
 	}
 	s.Unlock()
+}
+
+func (s *Server) Close() error {
+	if s.listener != nil {
+		return s.listener.Close()
+	}
+	return nil
 }
