@@ -11,12 +11,18 @@ func newServerClient(server *Server, conn net.Conn) *ServerClient {
 	client.Client = newClient(conn)
 	client.s = server
 	client.logger = server.logger
+	client.lastHB = time.Now()
 	return client
 }
 
 type ServerClient struct {
 	*Client
-	s *Server
+	s      *Server
+	lastHB time.Time
+}
+
+func (c *ServerClient) LastHB() time.Time {
+	return c.lastHB
 }
 
 func (c *ServerClient) keepalive() {
@@ -40,6 +46,7 @@ func (c *ServerClient) keepalive() {
 			return
 		}
 		c.logger.Printf("received keepalive pong from client.")
+		c.lastHB = time.Now()
 		if c.s.OnPong != nil {
 			c.s.OnPong(c)
 		}
