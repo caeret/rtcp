@@ -55,7 +55,7 @@ func (c *ServerClient) keepalive() {
 
 func (c *ServerClient) Send(d []byte) (data []byte, err error) {
 	_, data, err = c.send(CMDData, d)
-	if err != nil {
+	if err != nil && err != ErrClientBusy {
 		c.s.removeClient(c.IP())
 	}
 	return
