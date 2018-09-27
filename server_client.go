@@ -53,8 +53,9 @@ func (c *ServerClient) keepalive() {
 	}
 }
 
-func (c *ServerClient) Send(d []byte) (header Header, data []byte, err error) {
-	return c.send(CMDData, d)
+func (c *ServerClient) Send(d []byte) (data []byte, err error) {
+	_, data, err = c.send(CMDData, d)
+	return
 }
 
 func (c *ServerClient) send(CMD string, d []byte) (header Header, data []byte, err error) {
