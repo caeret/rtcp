@@ -11,12 +11,13 @@ const (
 	CMDData = "data"
 )
 
-func Dial(addr string, logger Logger) (client *Client, err error) {
-	conn, err := net.DialTimeout("tcp", addr, time.Second*5)
+func Dial(addr string, timeout time.Duration, logger Logger) (client *Client, err error) {
+	conn, err := net.DialTimeout("tcp", addr, timeout)
 	if err != nil {
 		return
 	}
 	client = newClient(conn, logger)
+	client.timeout = timeout
 	client.logger = logger
 	return
 }
@@ -29,6 +30,7 @@ func newClient(conn net.Conn, logger Logger) *Client {
 
 type Client struct {
 	OnData func(data []byte) ([]byte, error)
+	timeout time.Duration
 	*internalClient
 }
 
@@ -44,7 +46,19 @@ func (c *Client) Serve() error {
 		}
 	}()
 	for {
+		err := c.conn.SetReadDeadline(time.Now().Add(c.timeout))
+		if err != nil {
+			return err
+		}
 		header, data, err := Read(c.conn)
+		if err != nil {
+			if netErr, ok := err.(net.Error); ok && netErr.Timeout() {
+				c.logger.Printf("read timeout and heart beat should received before timeout, so close the connection.")
+				return err
+			}
+			return err
+		}
+		err = c.conn.SetWriteDeadline(time.Now().Add(c.timeout))
 		if err != nil {
 			return err
 		}
@@ -68,4 +82,3 @@ func (c *Client) Serve() error {
 		}
 	}
 }
-
