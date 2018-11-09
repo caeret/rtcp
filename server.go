@@ -59,9 +59,15 @@ func (s *Server) ListenAndServe() error {
 
 		err = s.addClient(client)
 		if err != nil {
-			s.logger.Printf("fail to add client: %s", err.Error())
+			s.logger.Printf("fail to add client %s, so it will be closed: %s", client.IP(), err.Error())
+			err = client.Close()
+			if err != nil {
+				s.logger.Printf("fail to close client: %s.", client.IP())
+			}
 			continue
 		}
+
+		s.logger.Printf("add client successfully.")
 
 		go client.keepalive()
 	}
